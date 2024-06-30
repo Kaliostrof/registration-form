@@ -32,9 +32,11 @@
 .btn:focus {
 	background-color: rgb(7, 71, 90);
 	cursor: pointer;
+	border: solid black 1px;
 }
 
 .error {
 	color: red;
 	font-weight: bold;
+	font-size: 12px;
 }

@@ -1,112 +1,98 @@
 import styles from './App.module.css';
-import { useRef, useState } from 'react';
+import React, { useRef } from 'react';
+import * as yup from 'yup';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 
 const sendDataonServer = (registrationData) => {
 	console.log(registrationData);
 };
 
+const formChangeScheme = yup.object().shape({
+	email: yup
+		.string()
+		.matches(
+			/^[\w_%-^*]*$/,
+			'Неверная почта. Допустимые символы: буквы, цифры и _%-^*',
+		)
+		.max(20, 'Почта должна быть меньше 20 символов')
+		.min(3, 'Почта должна быть больше 3-х символов')
+		.email('Не соответсвует типу email!'),
+	password: yup
+		.string()
+		.matches(
+			/^[\w_%-^*]*$/,
+			'Неверный пароль. Допустимые символы: буквы, цифры и _%-^*',
+		)
+		.max(20, 'Пароль должен быть меньше 20 символов')
+		.min(3, 'Пароль должен быть больше 3-х символов'),
+	repeatPassword: yup
+		.string()
+		.matches(
+			/^[\w_%-^*]*$/,
+			'Неверный пароль. Допустимые символы: буквы, цифры и _%-^*',
+		)
+		.max(20, 'Повторный пароль должен быть меньше 20 символов')
+		.min(3, 'Повторный пароль должен быть больше 3-х символов')
+		.oneOf([yup.ref('password'), null], 'Пароль и повтор пароля не совпадают'),
+});
+
 export const App = () => {
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
-	const [repeatPassword, setRepeatPassword] = useState('');
-	const [error, setError] = useState(null);
 	const buttonRef = useRef(null);
 
-	let newError = null;
-
-	const validationForm = (target) => {
-		if (!/^[\w_%-^*]*$/.test(target.value)) {
-			newError =
-				'Неверная почта или пароль. Допустимые символы: буквы, цифры и _%-^*';
-			setError(newError);
-		} else {
-			setError(null);
-		}
-	};
-
-	const onLoginChange = ({ target }) => {
-		setEmail(target.value);
-		validationForm(target);
-	};
-
-	const onPasswordChange = ({ target }) => {
-		setPassword(target.value);
-		validationForm(target);
-	};
-
-	const onRepeatPasswordChange = ({ target }) => {
-		setRepeatPassword(target.value);
-		validationForm(target);
-		if (target.value === password && email !== '') {
-			buttonRef.current.focus();
-		}
-	};
-
-	const onFormBlur = ({ target }) => {
-		if (target.value.length < 3) {
-			newError = 'Почта или пароль должны быть больше 3-х символов';
-			setError(newError);
-		} else if (target.value.length > 20) {
-			newError = 'Почта или пароль должны быть меньше 20 символов';
-			setError(newError);
-		} else {
-			setError(null);
-		}
-	};
-
-	const newData = [email, password, repeatPassword];
-	const isFull = newData.every((item) => {
-		return item !== '';
+	const {
+		register,
+		handleSubmit,
+		setFocus,
+		formState: { errors, isValid },
+	} = useForm({
+		defaultValues: {
+			email: '',
+			password: '',
+			repeatPassword: '',
+		},
+		mode: 'onChange',
+		resolver: yupResolver(formChangeScheme),
 	});
 
-	const onSubmit = (event) => {
-		event.preventDefault();
-
-		if (isFull) {
-			if (repeatPassword !== password) {
-				newError = 'Пароль и введённый повторно пароль не совпадают';
-				setError(newError);
-			} else {
-				sendDataonServer({ email, password, repeatPassword });
-			}
-		} else {
-			newError = 'Есть незаполненные поля';
-			setError(newError);
-		}
-	};
+	const emailError = errors.email?.message;
+	const passwordError = errors.password?.message;
+	const repeatPasswordError = errors.repeatPassword?.message;
 
 	return (
 		<div className={styles.app}>
-			<form onSubmit={onSubmit} className={styles.main}>
-				{error && <div className={styles.error}>{error}</div>}
+			<form onSubmit={handleSubmit(sendDataonServer)} className={styles.main}>
 				<input
 					className={styles.input}
 					type="email"
 					name="email"
-					value={email}
 					placeholder="Почта"
-					onBlur={onFormBlur}
-					onChange={onLoginChange}
+					{...register('email')}
 				></input>
+				{emailError && <div className={styles.error}>{emailError}</div>}
 				<input
 					className={styles.input}
 					type="password"
 					name="password"
-					value={password}
 					placeholder="Пароль"
-					onChange={onPasswordChange}
+					{...register('password')}
 				></input>
+				{passwordError && <div className={styles.error}>{passwordError}</div>}
 				<input
 					className={styles.input}
 					type="password"
 					name="repeatPassword"
-					value={repeatPassword}
 					placeholder="Повторите пароль"
-					onBlur={onFormBlur}
-					onChange={onRepeatPasswordChange}
+					{...register('repeatPassword')}
+					onBlur={() => {
+						if (isValid) buttonRef.current.focus();
+					}}
 				></input>
+				{repeatPasswordError && (
+					<div className={styles.error}>{repeatPasswordError}</div>
+				)}
 				<button
-					disabled={!!error}
+					disabled={!isValid}
 					className={styles.btn}
 					ref={buttonRef}
 					type="submit"
